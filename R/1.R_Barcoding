@@ -1,0 +1,23 @@
+### Replace Barcodes to number and add Experiment name to columns:
+##Change path for where the files are: 
+setwd("/data/gruen/group/alfonso/Rotation1/velocity/gamma_delta_sagar/Matrix_counts")
+files <- list.files(pattern = "*.tsv") # Load current enviroment file 
+input_barcodes_dir <- "/data/processing/alfonso/Rotation1/celseq_barcodes.192.txt"
+#gene2iso <- read.csv("/data/gruen/group/herman/RaceIDScripts/wgEncodeGencodeBasicVM9_clean_genes2groups.tsv",sep="\t",header=FALSE)
+require(dplyr); require(reshape2); require(plyr); 
+#function 
+ColBarCoding2 <- function( filename ) {
+  input_barcodes_dir <- "/data/processing/alfonso/Rotation1/celseq_barcodes.192.txt"
+  keyword <- "_R2.substracted.fastq.gz._mappedAligned.out.sam.featureCounts.bam.sort.bam.counts.tsv"
+  # read in the data
+  data <- read.table(filename, sep = "\t", row.names = 1, header = T)
+  barcodes <- read.table(input_barcodes_dir, sep = "\t")
+  # add a replace Barcode by its number
+  names(data) <- barcodes$V1[match(names(data), barcodes$V2, nomatch = 0)]
+  shortname <- sub(keyword, "", filename)
+  colnames(data) <- paste(shortname, colnames(data), sep = "_")
+  
+write.csv(data, file = paste(shortname, ".csv", sep=""), col.names = T)
+  }
+lapply(files, ColBarCoding2)
+
