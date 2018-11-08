@@ -19,3 +19,11 @@ merge_w_genes <- merge(merged_star_final_ensemblids, results, by ="gene", all.x 
 sum_merge_w_genes <- merge_w_genes %>% 
   group_by(mgi_symbol) %>% 
   summarise_all(funs(sum))
+Data <- as.data.frame(sum_merge_w_genes)
+Data  <- Data[complete.cases(Data), ]
+rownames(datas) <- datas$mgi_symbol
+datas$mgi_symbol <- NULL 
+
+
+##Write final 
+write.csv(Data, file="Merged_Csv_file.csv")
