@@ -1,0 +1,164 @@
+---
+title: "Mappers_comparisons"
+author: "Carlos Alfonso"
+date: "30/10/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(stringr); library(scater);library(RaceID)
+knitr::opts_chunk$set(echo = TRUE)
+load("/data/gruen/group/alfonso/curated_comparissons.RData")
+
+#create other object called star.rawa to run this function (is stupid but you can see if you mess up the data)
+changeColnames <- function(star.rawa){
+  colnames(star.rawa) <- sub(".*_w", "w", colnames(star.rawa)) 
+  colnames(star.rawa) <- sub("_gd_", "_", colnames(star.rawa)) 
+  colnames(star.rawa) <- sub("e_g", "g", colnames(star.rawa)) 
+  colnames(star.rawa) <- sub("1_d", "d", colnames(star.rawa)) 
+  colnames(star.rawa) <- sub(".*_w", "w", colnames(star.rawa)) 
+  colnames(star.rawa) <- sub("_gd_", "_", colnames(star.rawa)) 
+  colnames(star.rawa) <- sub("e_g", "g", colnames(star.rawa)) 
+  colnames(star.rawa) <- sub("1_d", "d", colnames(star.rawa))
+  star.rawa <<-star.rawa
+  colnames_stars <- as.data.frame(colnames(star.rawa))
+    c <- as.data.frame(str_split_fixed(colnames_stars$`colnames(star.rawa)`, "_", 5))
+      levels(c$V3)
+          colnames_stars$Cellstype <- c$V2 
+          colnames_stars$Batch <- c$V3
+              #anno. <<- colnames_stars
+}
+##This function were apply to all matrix counts to "clean" the names of columns this generates two files a data frame with corrected titles eliminating extra "_" and spaces that difficult cell annotation. the functon gives an object called anno that helps SingleCell experiment for downstream analysis 
+```
+
+## R Markdown
+
+Data was proccessed using umi.star_extract (using barcode list), STAR snakemake file (housemade), and merging and annotating using Gruen (house code):
+
+```{r cars}
+summary(cars)
+##Create ColInfo data for both matrixes of mappers
+umi.star <- SingleCellExperiment(
+    assays = list(counts = as.matrix(star.raw)), 
+    colData = anno.star
+)
+
+umi.bwa <- SingleCellExperiment(
+    assays = list(counts = as.matrix(bwa.raw)), 
+    colData = anno.bwa
+)
+
+#remove genes with 0
+
+keep_feature <- rowSums(counts(umi.star) > 0) > 0
+umi.star <- umi.star[keep_feature, ]
+isSpike(umi.star, "ERCC") <- grepl("^ERCC-", rownames(umi.star))
+isSpike(umi.star, "MT") <- rownames(umi.star) %in% 
+  c("ENSG00000198899", "ENSG00000198727", "ENSG00000198888",
+    "ENSG00000198886", "ENSG00000212907", "ENSG00000198786",
+    "ENSG00000198695", "ENSG00000198712", "ENSG00000198804",
+    "ENSG00000198763", "ENSG00000228253", "ENSG00000198938",
+    "ENSG00000198840")
+umi.star <- calculateQCMetrics(
+      umi.star,
+      feature_controls = list(
+          ERCC = isSpike(umi.star, "ERCC"), 
+          MT = isSpike(umi.star, "MT")
+    )
+)
+
+keep_feature <- rowSums(counts(umi.bwa) > 0) > 0
+umi.bwa <- umi.bwa[keep_feature, ]
+isSpike(umi.bwa, "ERCC") <- grepl("^ERCC-", rownames(umi.bwa))
+isSpike(umi.bwa, "MT") <- rownames(umi.bwa) %in% 
+  c("ENSG00000198899", "ENSG00000198727", "ENSG00000198888",
+    "ENSG00000198886", "ENSG00000212907", "ENSG00000198786",
+    "ENSG00000198695", "ENSG00000198712", "ENSG00000198804",
+    "ENSG00000198763", "ENSG00000228253", "ENSG00000198938",
+    "ENSG00000198840")
+umi.bwa <- calculateQCMetrics(
+      umi.bwa,
+      feature_controls = list(
+          ERCC = isSpike(umi.bwa, "ERCC"), 
+          MT = isSpike(umi.bwa, "MT")
+    )
+)
+
+
+```
+
+## Including Plots
+
+Total counts mappers, for example:
+
+```{r, echo=FALSE}
+##Total counts
+par(mfrow=c(1,2))
+hist(
+    umi.star$total_counts,
+    breaks = 100,
+    main= "Total UMI counts STAR"
+)
+abline(v = 25000, col = "red")
+##add bwa 
+hist(
+    umi.bwa$total_counts,
+    breaks = 100,
+    main= "Total UMI counts BWA"
+)
+abline(v = 25000, col = "red")
+
+```
+
+Detected genes by mappers:
+```{r pressure, echo=FALSE}
+hist(
+    umi.star$total_features,
+    breaks = 100,
+    main = "Detected genes STAR"
+)
+abline(v = 7000, col = "red")
+
+##add BWA
+hist(
+    umi.bwa$total_features,
+    breaks = 100,
+    main = "Detected genes BWA"
+)
+abline(v = 7000, col = "red")
+
+
+```
+
+Highly expressed genes:
+```{r pressure, echo=FALSE}
+par(mfrow=c(1,2))
+plotQC(umi.star, type = "highest-expression") 
+plotQC(umi.bwa, type = "highest-expression")
+```
+
+Cluster saturation with BWA mapper 
+```{r pressure, echo=FALSE}
+#sc <- SCseq(bwa)
+#sc.bwa <- filterdata(sc.bwa,mintotal=2000)
+#sc.bwa <- compdist(sc.bwa,metric="pearson")
+#sc.bwa <- clustexp(sc.bwa, clustnr = 60)
+par(mfrow=c(1,2))
+plotsaturation(sc.bwa,disp=FALSE)
+plotsaturation(sc.bwa,disp=TRUE)
+```
+
+Cluster saturation with STAR mapper 
+```{r pressure, echo=FALSE}
+#sc <- SCseq(bwa)
+#sc.bwa <- filterdata(sc.bwa,mintotal=2000)
+#sc.bwa <- compdist(sc.bwa,metric="pearson")
+#sc.bwa <- clustexp(sc.bwa, clustnr = 60)
+par(mfrow=c(1,2))
+plotsaturation(sc.star,disp=FALSE)
+plotsaturation(sc.star,disp=TRUE)
+```
+
+
+
+
