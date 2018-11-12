@@ -1,0 +1,27 @@
+
+workdir: "/data/processing3/alfonso/drosophila_carlos
+localrules: all
+SAMPLE, = glob_wildcards(fastq_files/"{smp}_R1.subs.fq.gz")
+print(SAMPLE)
+
+onsuccess:
+  print("Removing TmpSTAR directories")
+  shell("rm -rf snakeSTAR_results/TmpSTAR*")
+  print("Workflow finished, no error")
+
+onerror:
+  print("Removing TmpSTAR directories")
+  shell("rm -rf snakeSTAR_results/TmpSTAR*")
+  print("An error occurred")
+
+rule all:
+  input:
+        expand("snakeSTAR_results/{sample}_R2.bam", sample=SAMPLE)
+
+rule alignGenome:
+  input:R2= "raw_data_gunzip/{sample}_R2.fastq"
+  output:
+    c="snakeSTAR_results/{sample}.Aligned.sortedByCoord.out.bam"
+  shell:
+    "STAR --runThreadN 20  --runMode alignReads --readFilesIn {input} --genomeDir   --outFilterMismatchNoverLmax 0.1 --outSAMtype BAM Sort$
+
