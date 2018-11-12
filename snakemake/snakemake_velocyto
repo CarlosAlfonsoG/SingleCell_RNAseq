@@ -1,0 +1,36 @@
+"""
+Author: Carlos
+Affiliation: Max Planck Institute for Immunobiology and Epigenetics
+Aim: RNA velocity
+Date Start: Thursday Oct 19 12:08:10 CET 2018
+Run: snakemake   -s Snakefile
+Latest modification:
+  - add_Star_maping
+"""
+##-----------------------------------------------##
+## Working directory                             ##
+## Adapt to your needs                           ##
+##-----------------------------------------------##
+BASE_DIR = "/data/processing/alfonso"
+WDIR = BASE_DIR + "/velocity"
+workdir: WDIR
+## The list of samples to be processed
+##--------------------------------------------------------------------------------------##
+import glob
+foo = glob.glob("velocity_results/velocity_data/*_R1.substracted.fastq")
+SAMPLES = [x[:-21] for x in foo]
+#SAMPLES = glob_wildcards("week6_wt/{smp}_R1.fastq.gz")
+
+rule final:
+    input: expand("{smp}_loom.velocity", smp=SAMPLES)
+
+rule umi_extract:
+    input: R2="{smp}_mappedreads",
+           mask = "/data/processing/alfonso/velocity/mm10_rmsk.gtf "
+           genes="/data/repository/organisms/GRCm38_ensembl/ensembl/release-91/genes.gtf"
+           barcode="/data/processing/alfonso/velocity/umi_celseq_barcodes.192.txt"
+    output: OR2="{smp}_loom.velocity"
+    message: """--- Mapping Reads o.o"""
+    shell:
+        """
+        velocyto run -b {input.barcode} -o {output.OR2} -m {input.mask} {input.R2} {input.genes}
